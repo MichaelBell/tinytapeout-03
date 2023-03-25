@@ -3,7 +3,6 @@
 -v $(USER_PROJECT_VERILOG)/rtl/scanchain/scanchain.v
 -v $(USER_PROJECT_VERILOG)/rtl/cells.v
 -v $(USER_PROJECT_VERILOG)/rtl/user_module_357464855584307201.v
--v $(USER_PROJECT_VERILOG)/rtl/001_weverest_top.sv
 -v $(USER_PROJECT_VERILOG)/rtl/user_module_357752736742764545.v
 -v $(USER_PROJECT_VERILOG)/rtl/003_meiniki_pi.v
 -v $(USER_PROJECT_VERILOG)/rtl/004_wormy_top.v
@@ -22,3 +21,7 @@
 -v $(USER_PROJECT_VERILOG)/rtl/017_counter.v
 -v $(USER_PROJECT_VERILOG)/rtl/user_module_354091612057990145.v
 -v $(USER_PROJECT_VERILOG)/rtl/019_cpu.v
+-v $(USER_PROJECT_VERILOG)/../../tt03-hovalaag/src/hovalaag_wrapper.v
+-v $(USER_PROJECT_VERILOG)/../../tt03-hovalaag/src/ring_oscillator.v
+-v $(USER_PROJECT_VERILOG)/../../tt03-hovalaag/src/decoder.v
+-v $(USER_PROJECT_VERILOG)/../../tt03-hovalaag/src/HovalaagCPU/Hovalaag.v
