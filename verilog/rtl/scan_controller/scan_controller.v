@@ -23,13 +23,15 @@ module scan_controller #(
     input  wire scan_clk_in,            // feedback clock after having done the whole round
     input  wire scan_data_in,           // will be driven by internal driver, external gpio pins, or Caravel logic analyser
     output reg  scan_select,            // external scan chain driver muxes with ins/outs, eg microcontroller outside the ASIC
-    output reg  scan_latch_en,
+    output reg  scan_latch_io0_en,
+    output reg  scan_latch_io7_1_en,
 
     input  wire la_scan_clk_in,         // logic analyser scan chain driver, driven by firmware running on Caravel's VexRisc
     input  wire la_scan_data_in,        // signal names from perspective of this module toward scan chain
     output wire la_scan_data_out,
     input  wire la_scan_select,
-    input  wire la_scan_latch_en,
+    input  wire la_scan_latch_io0_en,
+    input  wire la_scan_latch_io7_1_en,
 
     input  wire [1:0] driver_sel,       // 00 = external, 01 = logic analyzer, 1x = internal
 
@@ -54,14 +56,16 @@ module scan_controller #(
     wire        ext_scan_clk_out;
     wire        ext_scan_data_out;
     wire        ext_scan_select;
-    wire        ext_scan_latch_en;
+    wire        ext_scan_latch_io0_en;
+    wire        ext_scan_latch_io7_1_en;
 
     wire        int_scan_clk_in;
     wire        int_scan_data_in;
     reg         int_scan_clk_out;
     reg         int_scan_data_out;
     reg         int_scan_select;
-    reg         int_scan_latch_en;
+    reg         int_scan_latch_io0_en;
+    reg         int_scan_latch_io7_1_en;
 
     // FSM
     localparam [3:0]
@@ -70,15 +74,16 @@ module scan_controller #(
         ST_IN_SHIFT_LO      = 2,    // Shift input to design: lo-clk
         ST_IN_SHIFT_HI      = 3,    // Shift input to design: hi-clk
         ST_IN_LATCH_WAIT    = 4,    // Wait before latching
-        ST_IN_LATCH         = 5,    // Latch
-        ST_OUT_LOAD_PRE     = 6,    // Prepare load
-        ST_OUT_LOAD         = 7,    // Clock once to load
-        ST_OUT_LOAD_POST    = 8,    // Wait for load to be done
-        ST_OUT_LOAD_CLR     = 9,    // Restore chain to shift mode
-        ST_OUT_SHIFT_LO     = 10,   // Shift output to us: lo-clk
-        ST_OUT_SHIFT_HI     = 11,   // Shift output to us: hi-clk
-        ST_OUT_CAP_WAIT     = 12,   // Wait for capture
-        ST_OUT_CAP          = 13;   // Capture to out local register
+        ST_IN_LATCH_IO0     = 5,    // Latch io0
+        ST_IN_LATCH_IO7_1   = 6,    // Latch io7:1
+        ST_OUT_LOAD_PRE     = 7,    // Prepare load
+        ST_OUT_LOAD         = 8,    // Clock once to load
+        ST_OUT_LOAD_POST    = 9,    // Wait for load to be done
+        ST_OUT_LOAD_CLR     = 10,    // Restore chain to shift mode
+        ST_OUT_SHIFT_LO     = 11,   // Shift output to us: lo-clk
+        ST_OUT_SHIFT_HI     = 12,   // Shift output to us: hi-clk
+        ST_OUT_CAP_WAIT     = 13,   // Wait for capture
+        ST_OUT_CAP          = 14;   // Capture to out local register
 
     reg       active;
 
@@ -148,10 +153,11 @@ module scan_controller #(
         // externally (see driver_sel input)
 
     // External interface
-    assign ext_scan_clk_out   = inputs[0];
-    assign ext_scan_data_out  = inputs[1];
-    assign ext_scan_select    = inputs[2];
-    assign ext_scan_latch_en  = inputs[3];
+    assign ext_scan_clk_out        = inputs[0];
+    assign ext_scan_data_out       = inputs[1];
+    assign ext_scan_select         = inputs[2];
+    assign ext_scan_latch_io0_en   = inputs[3];
+    assign ext_scan_latch_io7_1_en = inputs[4];
 
     assign ext_scan_clk_in    = scan_clk_in;
     assign ext_scan_data_in   = scan_data_in;
@@ -172,7 +178,8 @@ module scan_controller #(
                 scan_clk_out  = ext_scan_clk_out;
                 scan_data_out = ext_scan_data_out;
                 scan_select   = ext_scan_select;
-                scan_latch_en = ext_scan_latch_en;
+                scan_latch_io0_en = ext_scan_latch_io0_en;
+                scan_latch_io7_1_en = ext_scan_latch_io7_1_en;
             end
 
             // Caravel LA
@@ -180,7 +187,8 @@ module scan_controller #(
                 scan_clk_out  = la_scan_clk_in;
                 scan_data_out = la_scan_data_in;
                 scan_select   = la_scan_select;
-                scan_latch_en = la_scan_latch_en;
+                scan_latch_io0_en = la_scan_latch_io0_en;
+                scan_latch_io7_1_en = la_scan_latch_io7_1_en;
             end
 
             // Internal
@@ -188,7 +196,8 @@ module scan_controller #(
                 scan_clk_out  = int_scan_clk_out;
                 scan_data_out = int_scan_data_out;
                 scan_select   = int_scan_select;
-                scan_latch_en = int_scan_latch_en;
+                scan_latch_io0_en = int_scan_latch_io0_en;
+                scan_latch_io7_1_en = int_scan_latch_io7_1_en;
             end
         endcase
     end
@@ -244,9 +253,12 @@ module scan_controller #(
 
             ST_IN_LATCH_WAIT:
                 if (ws_cnt_done)
-                    state_nxt = ST_IN_LATCH;
+                    state_nxt = ST_IN_LATCH_IO0;
 
-            ST_IN_LATCH:
+            ST_IN_LATCH_IO0:
+                state_nxt = ST_IN_LATCH_IO7_1;
+
+            ST_IN_LATCH_IO7_1:
                 state_nxt = ST_OUT_LOAD_PRE;
 
             ST_OUT_LOAD_PRE:
@@ -311,7 +323,8 @@ module scan_controller #(
         int_scan_clk_out  <= (state == ST_IN_SHIFT_HI)  | (state == ST_OUT_LOAD) | (state == ST_OUT_SHIFT_HI);
         int_scan_data_out <= aio_input_shift[PL];
         int_scan_select   <= (state == ST_OUT_LOAD_PRE) | (state == ST_OUT_LOAD) | (state == ST_OUT_LOAD_POST);
-        int_scan_latch_en <= (state == ST_IN_LATCH);
+        int_scan_latch_io0_en <= (state == ST_IN_LATCH_IO0);
+        int_scan_latch_io7_1_en <= (state == ST_IN_LATCH_IO7_1);
     end
 
 

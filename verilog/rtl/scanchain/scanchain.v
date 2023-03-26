@@ -4,11 +4,13 @@ module scanchain (
     input wire clk_in,
     input wire data_in,
     input wire scan_select_in,
-    input wire latch_enable_in,
+    input wire latch_io7_1_enable_in,
+    input wire latch_io0_enable_in,
     output wire clk_out,
     output wire data_out,
     output wire scan_select_out,
-    output wire latch_enable_out,
+    output wire latch_io7_1_enable_out,
+    output wire latch_io0_enable_out,
 
     // io, names from point of view of the user module
     input wire [NUM_IOS-1:0] module_data_out,
@@ -31,9 +33,9 @@ module scanchain (
     // Same as for input, to try and be more consistent, we make our own
     wire data_out_i;
 
-    sky130_fd_sc_hd__buf_4 output_buffers[3:0] (
-        .A          ({clk,     data_out_i, scan_select_in,  latch_enable_in }),
-        .X          ({clk_out, data_out,   scan_select_out, latch_enable_out }),
+    sky130_fd_sc_hd__buf_4 output_buffers[4:0] (
+        .A          ({clk,     data_out_i, scan_select_in,  latch_io0_enable_in, latch_io7_1_enable_in }),
+        .X          ({clk_out, data_out,   scan_select_out, latch_io0_enable_out, latch_io7_1_enable_out }),
         .VPWR       (1'b1),
         .VGND       (1'b0)
     );
@@ -75,10 +77,18 @@ module scanchain (
 
     // latch is used to latch the input data of the user module while the scan chain is used to capture the user module's outputs
     // https://antmicro-skywater-pdk-docs.readthedocs.io/en/test-submodules-in-rtd/contents/libraries/sky130_fd_sc_hd/cells/dlxtp/README.html
-    sky130_fd_sc_hd__dlxtp_1 latch [NUM_IOS-1:0] (
-        .D          (scan_data_out),
-        .GATE       (latch_enable_in),
-        .Q          (module_data_in),
+    sky130_fd_sc_hd__dlxtp_1 latch_io_7_1 [NUM_IOS-1:1] (
+        .D          (scan_data_out[7:1]),
+        .GATE       (latch_io7_1_enable_in),
+        .Q          (module_data_in[7:1]),
+        .VPWR       (1'b1),
+        .VGND       (1'b0)
+    );
+
+    sky130_fd_sc_hd__dlxtp_1 latch_io_0 (
+        .D          (scan_data_out[0]),
+        .GATE       (latch_io0_enable_in),
+        .Q          (module_data_in[0]),
         .VPWR       (1'b1),
         .VGND       (1'b0)
     );
